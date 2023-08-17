@@ -219,6 +219,7 @@ namespace ExcelEditor.ViewModels
 
             int totalCount = DocumentList.Count;
             int processedCount = 0;
+            int noCounter = 1;
 
             var progress = new Progress<double>(percentage => ProgressValue = percentage);
 
@@ -252,7 +253,15 @@ namespace ExcelEditor.ViewModels
                             foreach (Excel.Worksheet sourceWorksheet in sourceWorkbook.Worksheets)
                             {
                                 int lastRow = combinedWorksheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Row + 1;
-                                CopyData(sourceWorksheet, combinedWorksheet, lastRow);
+                                if (processedExcelFiles == 0)
+                                {
+                                    CopyData(sourceWorksheet, combinedWorksheet, lastRow, 0, noCounter); // İlk dosyanın tüm satırlarını al
+                                }
+                                else
+                                {
+                                    CopyData(sourceWorksheet, combinedWorksheet, lastRow, 1, noCounter); // Diğer dosyaların sadece verilerini al
+                                }
+                                noCounter += sourceWorksheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Row - 2;
                             }
 
                             sourceWorkbook.Close(false);
@@ -287,20 +296,33 @@ namespace ExcelEditor.ViewModels
             ShowMessageBox("Dönüşüm başarıyla tamamlandı ve dosyalar birleştirildi.");
         }
 
-
-
-
-
-        private void CopyData(Excel.Worksheet sourceWorksheet, Excel.Worksheet destinationWorksheet, int startRow)
+        private void CopyData(Excel.Worksheet sourceWorksheet, Excel.Worksheet destinationWorksheet, int startRow, int processedFileIndex, int noCounter)
         {
             int lastRow = sourceWorksheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Row;
             int lastCol = sourceWorksheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Column;
 
-            for (int row = 1; row <= lastRow; row++)
+            if (processedFileIndex == 0) // İlk dosyanın tüm satırlarını alırken
             {
-                for (int col = 1; col <= lastCol; col++)
+                for (int row = 1; row <= lastRow; row++)
                 {
-                    destinationWorksheet.Cells[startRow + row - 1, col] = sourceWorksheet.Cells[row, col];
+                    for (int col = 1; col <= lastCol; col++)
+                    {
+                        destinationWorksheet.Cells[startRow + row - 1, col] = sourceWorksheet.Cells[row, col];
+                    }
+                }
+            }
+            else // Diğer dosyaların ilk iki satırını hariç tüm verilerini alırken
+            {
+                for (int row = 1; row <= lastRow; row++)
+                {
+                    if (row > 2) // İlk iki satır dışındaki satırları alır
+                    {
+                        for (int col = 1; col <= lastCol; col++)
+                        {
+                            destinationWorksheet.Cells[startRow + row - 3, col] = sourceWorksheet.Cells[row, col];
+                        }
+                        destinationWorksheet.Cells[startRow + row - 3, 1] = noCounter++;
+                    }
                 }
             }
         }
